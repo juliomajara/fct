@@ -95,7 +95,6 @@ if ($isExportRequest) {
         'Fin' => isset($result['end']) ? fmt_dmy((string)$result['end']) : '',
         'Horas totales' => isset($result['total']) ? fmt_hours((float)$result['total']).' h' : '',
         'Días computados' => isset($result['used_days']) ? (string)$result['used_days'] : '',
-        'Horas último día' => isset($result['last_day_hours']) ? fmt_hours((float)$result['last_day_hours']).' h' : '',
     ];
 
     $pdf->SetFont('Arial', '', 12);
@@ -485,7 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <style>
     :root{
         --bg:#f7fafc; --card:#ffffff; --ink:#0b1220; --muted:#6b7280; --line:#e5e7eb;
-        --accent:#16a34a; --accent-ink:#05240f;
+        --accent:#2563eb; --accent-ink:#ffffff;
         --work-bg:#d1fae5; --hol-bg:#ffe4e6;
         --start-bg:#dbeafe; --start-ol:#3b82f6;
         --end-bg:#ffedd5; --end-ol:#f59e0b;
@@ -510,7 +509,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         width:100%; min-width:110px; font-variant-numeric:tabular-nums;
     }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
-    .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+    .actions{display:flex;gap:6px;justify-content:center;margin-top:10px}
     button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
     button.secondary{padding:8px 12px;border:none;border-radius:8px;background:#1e293b;color:#f8fafc;font-weight:600;cursor:pointer}
     .export-form{margin:12px auto 0;display:flex;justify-content:center}
