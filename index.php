@@ -133,55 +133,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
-    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
-    h1{margin:0 0 14px 0;font-size:clamp(22px,2.4vw,30px)}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+    .wrap{max-width:900px;margin:32px auto;padding:0 12px}
+    h1{margin:0 0 12px 0;font-size:clamp(22px,2.2vw,28px)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
 
     /* Fila superior (Total + Inicio) */
-    .row-top{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:12px}
-    label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+    .row-top{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
     input[type="number"],input[type="date"],input[type="time"]{
-        width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:#fff; color:#000;
+        width:100%; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:#000;
         outline:none; text-align:center;
     }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
-    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-    button.primary{padding:10px 14px;border:none;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
+    .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+    button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
 
     /* Tabla de horarios */
     .schedule{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden}
-    .schedule th, .schedule td{border-bottom:1px solid var(--line); padding:8px}
-    .schedule th{background:#f8fafc; font-size:12px; color:#334155; text-align:center}
-    .schedule td{vertical-align:middle; text-align:center}
+    .schedule th, .schedule td{border-bottom:1px solid var(--line); padding:6px}
+    .schedule th{background:#f8fafc; font-size:11px; color:#334155; text-align:center}
+    .schedule td{vertical-align:middle; text-align:center; font-size:12px}
     .schedule td.label{font-weight:600; text-align:left}
     .schedule tr:last-child td{border-bottom:none}
-    .total-badge{display:inline-block; min-width:3ch; padding:4px 8px; border:1px solid var(--line); border-radius:8px; font-weight:700}
+    .total-badge{display:inline-block; min-width:3ch; padding:2px 6px; border:1px solid var(--line); border-radius:8px; font-weight:700; font-size:12px}
 
-    .error{border:1px solid #fecaca;background:#fff5f5;color:#7f1d1d;padding:10px;border-radius:10px;margin-top:12px}
-    .warn{border:1px solid #fde68a;background:#fffbeb;color:#92400e;padding:10px;border-radius:10px;margin-top:12px}
-    .result{border:1px solid var(--line);background:#fff;padding:12px;border-radius:12px;margin-top:14px}
-    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:6px}
-    .kpi .box{border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
-    .box h3{margin:4px 0 2px 0;font-size:13px;color:var(--muted)} .box p{margin:0;font-size:18px;font-weight:700}
+    .error{border:1px solid #fecaca;background:#fff5f5;color:#7f1d1d;padding:8px;border-radius:10px;margin-top:10px}
+    .warn{border:1px solid #fde68a;background:#fffbeb;color:#92400e;padding:8px;border-radius:10px;margin-top:10px}
+    .result{border:1px solid var(--line);background:#fff;padding:10px;border-radius:12px;margin-top:12px}
+    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-top:6px}
+    .kpi .box{border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+    .box h3{margin:4px 0 2px 0;font-size:12px;color:var(--muted)} .box p{margin:0;font-size:16px;font-weight:700}
 
     /* Calendario + leyenda colores (2 meses por fila) */
-    .cal-wrap{margin-top:14px}
-    .cal-legend{display:flex;gap:12px;align-items:center;margin:6px 0 12px 0;font-size:13px;color:var(--muted);flex-wrap:wrap}
-    .tag{display:inline-flex;align-items:center;gap:6px}
-    .dot{width:14px;height:14px;border-radius:3px;border:1px solid var(--line)}
+    .cal-wrap{margin-top:12px}
+    .cal-legend{display:flex;gap:10px;align-items:center;margin:4px 0 10px 0;font-size:12px;color:var(--muted);flex-wrap:wrap}
+    .tag{display:inline-flex;align-items:center;gap:4px}
+    .dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
     .dot.work{background:var(--work-bg)} .dot.hol{background:var(--hol-bg)}
     .dot.start{background:#eef2ff} .dot.end{background:#fff7ed}
 
-    .months{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(260px,1fr))}
-    @media (max-width:780px){ .months{grid-template-columns:repeat(1,minmax(260px,1fr))} }
+    .months{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(220px,1fr))}
+    @media (max-width:780px){ .months{grid-template-columns:repeat(1,minmax(220px,1fr))} }
     .month{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
-    .month h4{margin:0;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:700}
+    .month h4{margin:0;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
     .table{display:grid;grid-template-columns:repeat(7,1fr)}
-    .dow{font-size:12px;color:#64748b;padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;background:#f8fafc}
-    .day{min-height:42px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:6px 8px}
+    .dow{font-size:11px;color:#64748b;padding:4px 6px;border-bottom:1px solid var(--line);text-align:center;background:#f8fafc}
+    .day{min-height:36px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px}
     .day:nth-child(7n){border-right:none}
     .day.empty{background:#f8fafc}
-    .day .num{font-size:12px;color:#111827}
+    .day .num{font-size:11px;color:#111827}
     .is-start{outline:2px solid var(--start-ol);outline-offset:-2px;border-radius:8px}
     .is-end{outline:2px solid var(--end-ol);outline-offset:-2px;border-radius:8px} /* línea continua */
     .empresa{background:#d1fae5}   /* verde */
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="number" inputmode="decimal" step="0.25" min="0" id="total_hours" name="total_hours"
                            placeholder="120" value="<?= htmlspecialchars($_POST['total_hours'] ?? '') ?>">
                 </div>
-                <div class="field" style="max-width:280px">
+                <div class="field" style="max-width:240px">
                     <label for="start_date">Fecha de inicio</label>
                     <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($_POST['start_date'] ?? '') ?>">
                 </div>
