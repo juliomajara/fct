@@ -108,7 +108,16 @@ if ($isExportRequest) {
     if ($schedule) {
         $pdf->Ln(6);
         $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 7, $toPdf('Horario semanal (L-V)'), 0, 1, 'L');
+        $hasWeekend = false;
+        foreach ($schedule as $row) {
+            if (!isset($row['label'])) continue;
+            if (in_array($row['label'], ['Sábado', 'Domingo'], true)) {
+                $hasWeekend = true;
+                break;
+            }
+        }
+        $title = $hasWeekend ? 'Horario semanal' : 'Horario semanal (L-V)';
+        $pdf->Cell(0, 7, $toPdf($title), 0, 1, 'L');
 
         $headers = ['Día', 'Entrada mañana', 'Salida mañana', 'Entrada tarde', 'Salida tarde', 'Horas/día'];
         $widths = [36, 38, 38, 38, 38, 32];
@@ -409,14 +418,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $daily[ $dayIndex[$k] ] = $mins / 60.0;
     }
 
-    foreach (['mon','tue','wed','thu','fri'] as $k) {
+    foreach ($keys as $k) {
+        $hoursForDay = $daily[$dayIndex[$k]] ?? 0.0;
+        if (in_array($k, ['sat', 'sun'], true) && $hoursForDay <= 0) {
+            continue;
+        }
+
         $scheduleForExport[] = [
             'label' => $dayLabels[$k],
             'am_in' => trim((string)($_POST[$k.'_am_in'] ?? '')),
             'am_out' => trim((string)($_POST[$k.'_am_out'] ?? '')),
             'pm_in' => trim((string)($_POST[$k.'_pm_in'] ?? '')),
             'pm_out' => trim((string)($_POST[$k.'_pm_out'] ?? '')),
-            'hours' => $daily[$dayIndex[$k]] ?? 0.0,
+            'hours' => $hoursForDay,
         ];
     }
 
