@@ -144,6 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         width:100%; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:#000;
         outline:none; text-align:center;
     }
+    #total_hours{
+        width:8ch; max-width:100%; margin-left:auto; margin-right:auto;
+    }
+    .schedule input[type="time"]{
+        width:7ch; min-width:0;
+    }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
     button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
@@ -285,8 +291,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                     $inSpan = ($dateObj >= $calStart && $dateObj <= $calEnd);
                                     $isWeekend = in_array((int)$dateObj->format('N'), [6,7], true);
-                                    $isNoLectivo = $inSpan && ($isWeekend || isset($holidays[$dateStr]));
                                     $isWork  = isset($worked_days[$dateStr]);
+                                    $isHoliday = isset($holidays[$dateStr]);
+                                    $isNoLectivo = $inSpan && ($isHoliday || ($isWeekend && !$isWork));
 
                                     if ($dateStr === $result['start']) $classes[] = 'is-start';
                                     if ($dateStr === $result['end'])   $classes[] = 'is-end';
