@@ -587,12 +587,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <table class="schedule" aria-label="Horario semanal">
                 <thead>
                     <tr>
-                        <th>Día</th>
+                        <th rowspan="2">Día</th>
+                        <th colspan="2">Mañana</th>
+                        <th colspan="2">Tarde</th>
+                        <th rowspan="2">Total</th>
+                    </tr>
+                    <tr>
                         <th>Inicio</th>
                         <th>Fin</th>
                         <th>Inicio</th>
                         <th>Fin</th>
-                        <th>Total</th>
                     </tr>
                 </thead>
                 <tbody>
