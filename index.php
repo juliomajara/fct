@@ -175,8 +175,9 @@ if ($isExportRequest) {
         if ($months) {
             $pdf->AddPage();
             $pdf->Ln(8);
-            $pdf->SetFont('Arial', 'B', 12);
-            $pdf->Cell(0, 7, $toPdf('Calendario de prácticas'), 0, 1, 'L');
+            $pdf->SetFont('Arial', 'B', 14);
+            $pdf->Cell(0, 8, $toPdf('Calendario de prácticas'), 0, 1, 'L');
+            $pdf->Ln(3);
 
             $legendItems = [
                 ['type' => 'work',  'label' => 'Empresa'],
