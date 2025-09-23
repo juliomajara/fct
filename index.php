@@ -174,6 +174,7 @@ if ($isExportRequest) {
         }
 
         if ($months) {
+            $pdf->AddPage();
             $pdf->Ln(8);
             $pdf->SetFont('Arial', 'B', 12);
             $pdf->Cell(0, 7, $toPdf('Calendario de prácticas'), 0, 1, 'L');
@@ -480,7 +481,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cálculo de fecha de fin por horas + Calendario</title>
+<title>Cálculo de fecha de fin de prácticas</title>
 <style>
     :root{
         --bg:#f7fafc; --card:#ffffff; --ink:#0b1220; --muted:#6b7280; --line:#e5e7eb;
@@ -566,7 +567,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="wrap">
-    <h1>Calcular fecha de fin según horas por día</h1>
+    <h1>Cálculo de fecha de fin de prácticas</h1>
     <div class="card">
         <form method="post" action="" id="calcForm">
             <!-- Fila superior -->
