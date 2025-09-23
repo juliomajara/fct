@@ -161,10 +161,10 @@ if ($isExportRequest) {
                     $pdf->SetFillColor(255, 228, 230);
                     $pdf->SetDrawColor(249, 200, 205);
                 } elseif ($item['type'] === 'start') {
-                    $pdf->SetFillColor(238, 242, 255);
+                    $pdf->SetFillColor(219, 234, 254);
                     $pdf->SetDrawColor(59, 130, 246);
                 } else {
-                    $pdf->SetFillColor(255, 247, 237);
+                    $pdf->SetFillColor(255, 237, 213);
                     $pdf->SetDrawColor(245, 158, 11);
                 }
 
@@ -219,6 +219,10 @@ if ($isExportRequest) {
                 $rows = (int)ceil(($firstDow - 1 + $daysInMonth) / 7);
                 $gridStartY = $headerY + $headerHeight;
                 $defaultDraw = [221, 227, 235];
+                $workFill = [209, 250, 229];
+                $offFill = [255, 228, 230];
+                $startFill = [219, 234, 254];
+                $endFill = [255, 237, 213];
 
                 for ($slot = 0; $slot < $rows * 7; $slot++) {
                     $row = intdiv($slot, 7);
@@ -243,29 +247,41 @@ if ($isExportRequest) {
                     $isHoliday = isset($holidays[$dateStr]);
                     $isNoLectivo = $inSpan && ($isHoliday || ($isWeekend && !$isWork));
 
-                    $fill = false;
-                    if ($isWork) {
-                        $pdf->SetFillColor(209, 250, 229);
-                        $fill = true;
-                    } elseif ($isNoLectivo) {
-                        $pdf->SetFillColor(255, 228, 230);
-                        $fill = true;
-                    }
-
                     $drawColor = $defaultDraw;
                     $isStart = ($dateStr === $result['start']);
                     $isEnd = ($dateStr === $result['end']);
+                    $style = 'D';
+                    $preFilled = false;
 
                     if ($isStart && $isEnd) {
+                        $pdf->SetFillColor($startFill[0], $startFill[1], $startFill[2]);
+                        $pdf->Rect($cellX, $cellY, $cellWidth / 2, $dayHeight, 'F');
+                        $pdf->SetFillColor($endFill[0], $endFill[1], $endFill[2]);
+                        $pdf->Rect($cellX + $cellWidth / 2, $cellY, $cellWidth / 2, $dayHeight, 'F');
                         $drawColor = [79, 70, 229];
+                        $preFilled = true;
                     } elseif ($isStart) {
+                        $pdf->SetFillColor($startFill[0], $startFill[1], $startFill[2]);
                         $drawColor = [59, 130, 246];
+                        $style = 'DF';
                     } elseif ($isEnd) {
+                        $pdf->SetFillColor($endFill[0], $endFill[1], $endFill[2]);
                         $drawColor = [245, 158, 11];
+                        $style = 'DF';
+                    } elseif ($isWork) {
+                        $pdf->SetFillColor($workFill[0], $workFill[1], $workFill[2]);
+                        $style = 'DF';
+                    } elseif ($isNoLectivo) {
+                        $pdf->SetFillColor($offFill[0], $offFill[1], $offFill[2]);
+                        $style = 'DF';
                     }
 
                     $pdf->SetDrawColor($drawColor[0], $drawColor[1], $drawColor[2]);
-                    $pdf->Rect($cellX, $cellY, $cellWidth, $dayHeight, $fill ? 'DF' : 'D');
+                    if ($preFilled) {
+                        $pdf->Rect($cellX, $cellY, $cellWidth, $dayHeight, 'D');
+                    } else {
+                        $pdf->Rect($cellX, $cellY, $cellWidth, $dayHeight, $style);
+                    }
 
                     $pdf->SetTextColor(17, 24, 39);
                     $pdf->SetFont('Arial', 'B', 8);
@@ -399,7 +415,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     :root{
         --bg:#f7fafc; --card:#ffffff; --ink:#0b1220; --muted:#6b7280; --line:#e5e7eb;
         --accent:#16a34a; --accent-ink:#05240f;
-        --work-bg:#d1fae5; --hol-bg:#ffe4e6; --start-ol:#3b82f6; --end-ol:#f59e0b;
+        --work-bg:#d1fae5; --hol-bg:#ffe4e6;
+        --start-bg:#dbeafe; --start-ol:#3b82f6;
+        --end-bg:#ffedd5; --end-ol:#f59e0b;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
@@ -418,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         width:8ch; max-width:100%; margin-left:auto; margin-right:auto;
     }
     .schedule input[type="time"]{
-        width:7ch; min-width:0;
+        width:9ch; min-width:0; font-variant-numeric:tabular-nums;
     }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
@@ -448,7 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .tag{display:inline-flex;align-items:center;gap:4px}
     .dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
     .dot.work{background:var(--work-bg)} .dot.hol{background:var(--hol-bg)}
-    .dot.start{background:#eef2ff} .dot.end{background:#fff7ed}
+    .dot.start{background:var(--start-bg)} .dot.end{background:var(--end-bg)}
 
     .months{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(220px,1fr))}
     @media (max-width:780px){ .months{grid-template-columns:repeat(1,minmax(220px,1fr))} }
@@ -456,14 +474,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .month h4{margin:0;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
     .table{display:grid;grid-template-columns:repeat(7,1fr)}
     .dow{font-size:11px;color:#64748b;padding:4px 6px;border-bottom:1px solid var(--line);text-align:center;background:#f8fafc}
-    .day{min-height:36px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px}
+    .day{min-height:36px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px;position:relative}
     .day:nth-child(7n){border-right:none}
     .day.empty{background:#f8fafc}
     .day .num{font-size:11px;color:#111827}
-    .is-start{outline:2px solid var(--start-ol);outline-offset:-2px;border-radius:8px}
-    .is-end{outline:2px solid var(--end-ol);outline-offset:-2px;border-radius:8px} /* línea continua */
     .empresa{background:#d1fae5}   /* verde */
     .nolectivo{background:#ffe4e6} /* rojo */
+    .day.is-start{background:var(--start-bg);box-shadow:inset 0 0 0 2px var(--start-ol);border-radius:8px}
+    .day.is-end{background:var(--end-bg);box-shadow:inset 0 0 0 2px var(--end-ol);border-radius:8px}
+    .day.is-start.is-end{
+        background:linear-gradient(135deg,
+            var(--start-bg) 0%,
+            var(--start-bg) 50%,
+            var(--end-bg) 50%,
+            var(--end-bg) 100%);
+        box-shadow:inset 0 0 0 2px var(--end-ol);
+        border-radius:8px;
+    }
     .num small{font-size:11px;color:#059669}
 </style>
 </head>
