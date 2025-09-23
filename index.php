@@ -496,23 +496,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
 
     /* Fila superior (Total + Inicio) */
-    .row-top{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:10px}
+    .row-top{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:10px;align-items:end}
     label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
     input[type="number"],input[type="date"],input[type="time"]{
         width:100%; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:#000;
         outline:none; text-align:center;
     }
     #total_hours{
-        width:8ch; max-width:100%; margin-left:auto; margin-right:auto;
+        width:100%; max-width:none; margin:0;
     }
     .schedule input[type="time"]{
-        width:12ch; min-width:0; font-variant-numeric:tabular-nums;
+        width:100%; min-width:110px; font-variant-numeric:tabular-nums;
     }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
     button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
     button.secondary{padding:8px 12px;border:none;border-radius:8px;background:#1e293b;color:#f8fafc;font-weight:600;cursor:pointer}
-    .export-form{margin-top:12px;display:flex;justify-content:flex-end}
+    .export-form{margin-top:12px;display:flex;justify-content:center}
 
     /* Tabla de horarios */
     .schedule{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden}
@@ -576,7 +576,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="number" inputmode="decimal" step="0.25" min="0" id="total_hours" name="total_hours"
                            placeholder="120" value="<?= htmlspecialchars($_POST['total_hours'] ?? '') ?>">
                 </div>
-                <div class="field" style="max-width:240px">
+                <div class="field">
                     <label for="start_date">Fecha de inicio</label>
                     <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($_POST['start_date'] ?? '') ?>">
                 </div>
