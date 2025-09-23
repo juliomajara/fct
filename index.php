@@ -512,7 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
     button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
     button.secondary{padding:8px 12px;border:none;border-radius:8px;background:#1e293b;color:#f8fafc;font-weight:600;cursor:pointer}
-    .export-form{margin-top:12px;display:flex;justify-content:center}
+    .export-form{margin:12px auto 0;display:flex;justify-content:center}
 
     /* Tabla de horarios */
     .schedule{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden}
@@ -616,14 +616,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="actions">
                 <button type="submit" class="primary">Calcular</button>
             </div>
+        </form>
 
-            <?php if ($error): ?>
-                <div class="error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
 
-            <?php if ($result): ?>
-                <?php if ($warn): ?><div class="warn"><?= htmlspecialchars($warn) ?></div><?php endif; ?>
-                <div class="result">
+        <?php if ($result): ?>
+            <?php if ($warn): ?><div class="warn"><?= htmlspecialchars($warn) ?></div><?php endif; ?>
+            <div class="result">
                     <strong>Resultado</strong>
                     <div class="kpi">
                         <div class="box"><h3>Inicio</h3><p><?= fmt_dmy($result['start']) ?></p></div>
@@ -704,7 +705,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php endif; ?>
-        </form>
     </div>
 </div>
 
