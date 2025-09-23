@@ -67,6 +67,7 @@ if ($isExportRequest) {
 
     $result = $decoded['result'];
     $worked_days = isset($decoded['worked_days']) && is_array($decoded['worked_days']) ? $decoded['worked_days'] : [];
+    $schedule = isset($decoded['schedule']) && is_array($decoded['schedule']) ? $decoded['schedule'] : [];
     $warn_msg = isset($decoded['warn']) && is_string($decoded['warn']) ? $decoded['warn'] : '';
 
     $holidays = build_holidays();
@@ -102,6 +103,40 @@ if ($isExportRequest) {
         if ($value === '') continue;
         $pdf->Cell(60, 8, $toPdf($label.':'), 0, 0);
         $pdf->Cell(0, 8, $toPdf($value), 0, 1);
+    }
+
+    if ($schedule) {
+        $pdf->Ln(6);
+        $pdf->SetFont('Arial', 'B', 12);
+        $pdf->Cell(0, 7, $toPdf('Horario semanal (L-V)'), 0, 1, 'L');
+
+        $headers = ['Día', 'Entrada mañana', 'Salida mañana', 'Entrada tarde', 'Salida tarde', 'Horas/día'];
+        $widths = [36, 38, 38, 38, 38, 32];
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetFillColor(248, 250, 252);
+        foreach ($headers as $i => $header) {
+            $pdf->Cell($widths[$i], 7, $toPdf($header), 1, 0, 'C', true);
+        }
+        $pdf->Ln();
+
+        $pdf->SetFont('Arial', '', 10);
+        foreach ($schedule as $row) {
+            $label = isset($row['label']) ? (string)$row['label'] : '';
+            $amIn = isset($row['am_in']) ? (string)$row['am_in'] : '';
+            $amOut = isset($row['am_out']) ? (string)$row['am_out'] : '';
+            $pmIn = isset($row['pm_in']) ? (string)$row['pm_in'] : '';
+            $pmOut = isset($row['pm_out']) ? (string)$row['pm_out'] : '';
+            $hours = isset($row['hours']) ? (float)$row['hours'] : 0.0;
+
+            $pdf->Cell($widths[0], 7, $toPdf($label), 1, 0, 'L');
+            $pdf->Cell($widths[1], 7, $toPdf($amIn !== '' ? $amIn : '-'), 1, 0, 'C');
+            $pdf->Cell($widths[2], 7, $toPdf($amOut !== '' ? $amOut : '-'), 1, 0, 'C');
+            $pdf->Cell($widths[3], 7, $toPdf($pmIn !== '' ? $pmIn : '-'), 1, 0, 'C');
+            $pdf->Cell($widths[4], 7, $toPdf($pmOut !== '' ? $pmOut : '-'), 1, 0, 'C');
+            $pdf->Cell($widths[5], 7, $toPdf(fmt_hours($hours).' h'), 1, 0, 'C');
+            $pdf->Ln();
+        }
     }
 
     if ($warn_msg !== '') {
@@ -345,6 +380,7 @@ $result = null;
 $error  = null;
 $warn   = null;
 $worked_days = [];
+$scheduleForExport = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $total_hours = parse_float($_POST['total_hours'] ?? '0');
@@ -354,6 +390,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $keys = ['mon','tue','wed','thu','fri','sat','sun'];
     $daily = [];
     $dayIndex = [ 'mon'=>1, 'tue'=>2, 'wed'=>3, 'thu'=>4, 'fri'=>5, 'sat'=>6, 'sun'=>7 ];
+    $dayLabels = [
+        'mon' => 'Lunes',
+        'tue' => 'Martes',
+        'wed' => 'Miércoles',
+        'thu' => 'Jueves',
+        'fri' => 'Viernes',
+        'sat' => 'Sábado',
+        'sun' => 'Domingo',
+    ];
 
     foreach ($keys as $k) {
         $am_in  = $_POST[$k.'_am_in']  ?? '';
@@ -362,6 +407,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pm_out = $_POST[$k.'_pm_out'] ?? '';
         $mins = dur_minutes($am_in, $am_out) + dur_minutes($pm_in, $pm_out);
         $daily[ $dayIndex[$k] ] = $mins / 60.0;
+    }
+
+    foreach (['mon','tue','wed','thu','fri'] as $k) {
+        $scheduleForExport[] = [
+            'label' => $dayLabels[$k],
+            'am_in' => trim((string)($_POST[$k.'_am_in'] ?? '')),
+            'am_out' => trim((string)($_POST[$k.'_am_out'] ?? '')),
+            'pm_in' => trim((string)($_POST[$k.'_pm_in'] ?? '')),
+            'pm_out' => trim((string)($_POST[$k.'_pm_out'] ?? '')),
+            'hours' => $daily[$dayIndex[$k]] ?? 0.0,
+        ];
     }
 
     if ($total_hours <= 0) {
@@ -436,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         width:8ch; max-width:100%; margin-left:auto; margin-right:auto;
     }
     .schedule input[type="time"]{
-        width:9ch; min-width:0; font-variant-numeric:tabular-nums;
+        width:12ch; min-width:0; font-variant-numeric:tabular-nums;
     }
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
@@ -568,6 +624,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'result' => $result,
                         'worked_days' => $worked_days,
                         'warn' => $warn,
+                        'schedule' => $scheduleForExport,
                     ];
                     $exportJson = json_encode($exportData, JSON_UNESCAPED_UNICODE);
                     $exportPayload = base64_encode($exportJson !== false ? $exportJson : '{}');
