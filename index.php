@@ -69,10 +69,15 @@ if ($isExportRequest) {
     $worked_days = isset($decoded['worked_days']) && is_array($decoded['worked_days']) ? $decoded['worked_days'] : [];
     $warn_msg = isset($decoded['warn']) && is_string($decoded['warn']) ? $decoded['warn'] : '';
 
+    $holidays = build_holidays();
+
     require_once __DIR__.'/fpdf.php';
 
-    $pdf = new FPDF();
+    $pdf = new FPDF('L', 'mm', 'A4');
     $pdf->SetTitle('Resumen de prácticas');
+    $margin = 12;
+    $pdf->SetMargins($margin, $margin, $margin);
+    $pdf->SetAutoPageBreak(true, $margin);
     $pdf->AddPage();
 
     $toPdf = static function (string $text): string {
@@ -109,18 +114,207 @@ if ($isExportRequest) {
 
     if ($worked_days) {
         ksort($worked_days);
-        $pdf->Ln(6);
-        $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 8, $toPdf('Detalle de horas por día'), 0, 1);
+    }
 
-        $pdf->SetFont('Arial', 'B', 10);
-        $pdf->Cell(120, 7, $toPdf('Fecha'), 1, 0, 'C');
-        $pdf->Cell(70, 7, $toPdf('Horas'), 1, 1, 'C');
+    if ($result) {
+        $calStart = new DateTimeImmutable($result['start']);
+        $calEnd   = new DateTimeImmutable($result['end']);
 
-        $pdf->SetFont('Arial', '', 10);
-        foreach ($worked_days as $date => $hours) {
-            $pdf->Cell(120, 7, $toPdf(fmt_dmy((string)$date)), 1, 0);
-            $pdf->Cell(70, 7, $toPdf(fmt_hours((float)$hours).' h'), 1, 1, 'R');
+        $months = [];
+        $cursor = new DateTimeImmutable($calStart->format('Y-m-01'));
+        $lastMonth = new DateTimeImmutable($calEnd->format('Y-m-01'));
+        $limitMonths = 0;
+        while ($cursor <= $lastMonth && $limitMonths++ < 60) {
+            $months[] = $cursor;
+            $cursor = $cursor->modify('first day of next month');
+        }
+
+        if ($months) {
+            $pdf->Ln(8);
+            $pdf->SetFont('Arial', 'B', 12);
+            $pdf->Cell(0, 7, $toPdf('Calendario de prácticas'), 0, 1, 'L');
+
+            $legendItems = [
+                ['type' => 'work',  'label' => 'Empresa'],
+                ['type' => 'off',   'label' => 'No lectivo'],
+                ['type' => 'start', 'label' => 'Inicio'],
+                ['type' => 'end',   'label' => 'Fin'],
+            ];
+
+            $pdf->SetFont('Arial', '', 10);
+            $legendHeight = 6;
+            $boxSize = 6;
+            $cursorX = $pdf->GetX();
+            $cursorY = $pdf->GetY();
+
+            foreach ($legendItems as $item) {
+                $label = $toPdf($item['label']);
+                $labelWidth = $pdf->GetStringWidth($label) + $boxSize + 6;
+
+                $boxX = $cursorX;
+                $boxY = $cursorY + ($legendHeight - $boxSize) / 2;
+
+                if ($item['type'] === 'work') {
+                    $pdf->SetFillColor(209, 250, 229);
+                    $pdf->SetDrawColor(165, 216, 194);
+                } elseif ($item['type'] === 'off') {
+                    $pdf->SetFillColor(255, 228, 230);
+                    $pdf->SetDrawColor(249, 200, 205);
+                } elseif ($item['type'] === 'start') {
+                    $pdf->SetFillColor(238, 242, 255);
+                    $pdf->SetDrawColor(59, 130, 246);
+                } else {
+                    $pdf->SetFillColor(255, 247, 237);
+                    $pdf->SetDrawColor(245, 158, 11);
+                }
+
+                $pdf->Rect($boxX, $boxY, $boxSize, $boxSize, 'DF');
+
+                $pdf->SetXY($boxX + $boxSize + 2, $cursorY);
+                $pdf->Cell($labelWidth - $boxSize - 2, $legendHeight, $label, 0, 0, 'L');
+
+                $cursorX += $labelWidth + 4;
+                $pdf->SetXY($cursorX, $cursorY);
+            }
+
+            $pdf->Ln($legendHeight + 4);
+
+            $monthLayout = [
+                'titleHeight' => 7.0,
+                'headerHeight' => 6.0,
+                'dayHeight' => 12.0,
+            ];
+
+            $calcMonthHeight = static function (DateTimeImmutable $monthStart) use ($monthLayout): float {
+                $daysInMonth = (int)$monthStart->format('t');
+                $firstDow = (int)$monthStart->format('N');
+                $rows = (int)ceil(($firstDow - 1 + $daysInMonth) / 7);
+                return $monthLayout['titleHeight'] + $monthLayout['headerHeight'] + $rows * $monthLayout['dayHeight'];
+            };
+
+            $drawMonth = static function (FPDF $pdf, DateTimeImmutable $monthStart, float $x, float $y, float $width) use ($monthLayout, $worked_days, $holidays, $result, $calStart, $calEnd, $toPdf): float {
+                $pdf->SetDrawColor(221, 227, 235);
+                $pdf->SetTextColor(17, 24, 39);
+
+                $titleHeight = $monthLayout['titleHeight'];
+                $headerHeight = $monthLayout['headerHeight'];
+                $dayHeight = $monthLayout['dayHeight'];
+                $cellWidth = $width / 7.0;
+
+                $pdf->SetFont('Arial', 'B', 11);
+                $pdf->SetXY($x, $y);
+                $pdf->Cell($width, $titleHeight, $toPdf(month_name_es((int)$monthStart->format('n')).' '.$monthStart->format('Y')), 0, 0, 'L');
+
+                $headerY = $y + $titleHeight;
+                $pdf->SetFont('Arial', 'B', 8);
+                $pdf->SetFillColor(248, 250, 252);
+                $dow = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+                foreach ($dow as $i => $label) {
+                    $pdf->SetXY($x + $i * $cellWidth, $headerY);
+                    $pdf->Cell($cellWidth, $headerHeight, $toPdf($label), 1, 0, 'C', true);
+                }
+
+                $daysInMonth = (int)$monthStart->format('t');
+                $firstDow = (int)$monthStart->format('N');
+                $rows = (int)ceil(($firstDow - 1 + $daysInMonth) / 7);
+                $gridStartY = $headerY + $headerHeight;
+                $defaultDraw = [221, 227, 235];
+
+                for ($slot = 0; $slot < $rows * 7; $slot++) {
+                    $row = intdiv($slot, 7);
+                    $col = $slot % 7;
+                    $cellX = $x + $col * $cellWidth;
+                    $cellY = $gridStartY + $row * $dayHeight;
+
+                    if ($slot < $firstDow - 1 || $slot >= ($firstDow - 1 + $daysInMonth)) {
+                        $pdf->SetDrawColor($defaultDraw[0], $defaultDraw[1], $defaultDraw[2]);
+                        $pdf->SetFillColor(248, 250, 252);
+                        $pdf->Rect($cellX, $cellY, $cellWidth, $dayHeight, 'DF');
+                        continue;
+                    }
+
+                    $day = $slot - ($firstDow - 1) + 1;
+                    $dateStr = sprintf('%s-%02d', $monthStart->format('Y-m'), $day);
+                    $dateObj = new DateTimeImmutable($dateStr);
+
+                    $inSpan = ($dateObj >= $calStart && $dateObj <= $calEnd);
+                    $isWeekend = in_array((int)$dateObj->format('N'), [6, 7], true);
+                    $isWork = isset($worked_days[$dateStr]);
+                    $isHoliday = isset($holidays[$dateStr]);
+                    $isNoLectivo = $inSpan && ($isHoliday || ($isWeekend && !$isWork));
+
+                    $fill = false;
+                    if ($isWork) {
+                        $pdf->SetFillColor(209, 250, 229);
+                        $fill = true;
+                    } elseif ($isNoLectivo) {
+                        $pdf->SetFillColor(255, 228, 230);
+                        $fill = true;
+                    }
+
+                    $drawColor = $defaultDraw;
+                    $isStart = ($dateStr === $result['start']);
+                    $isEnd = ($dateStr === $result['end']);
+
+                    if ($isStart && $isEnd) {
+                        $drawColor = [79, 70, 229];
+                    } elseif ($isStart) {
+                        $drawColor = [59, 130, 246];
+                    } elseif ($isEnd) {
+                        $drawColor = [245, 158, 11];
+                    }
+
+                    $pdf->SetDrawColor($drawColor[0], $drawColor[1], $drawColor[2]);
+                    $pdf->Rect($cellX, $cellY, $cellWidth, $dayHeight, $fill ? 'DF' : 'D');
+
+                    $pdf->SetTextColor(17, 24, 39);
+                    $pdf->SetFont('Arial', 'B', 8);
+                    $pdf->SetXY($cellX + 1.5, $cellY + 1.2);
+                    $pdf->Cell($cellWidth - 3, 3.5, $toPdf((string)$day), 0, 0, 'L');
+
+                    if ($isWork) {
+                        $hours = fmt_hours((float)$worked_days[$dateStr]).' h';
+                        $pdf->SetFont('Arial', '', 7);
+                        $pdf->SetTextColor(5, 150, 105);
+                        $pdf->SetXY($cellX + 1.5, $cellY + 5.6);
+                        $pdf->Cell($cellWidth - 3, 3.5, $toPdf($hours), 0, 0, 'L');
+                    }
+
+                    $pdf->SetTextColor(17, 24, 39);
+                }
+
+                return $monthLayout['titleHeight'] + $monthLayout['headerHeight'] + $rows * $monthLayout['dayHeight'];
+            };
+
+            $usableWidth = $pdf->GetPageWidth() - 2 * $margin;
+            $columnGap = 8;
+            $monthWidth = ($usableWidth - $columnGap) / 2.0;
+            $rowGap = 8;
+            $marginBottom = $margin;
+            $currentY = $pdf->GetY();
+
+            $countMonths = count($months);
+            for ($i = 0; $i < $countMonths; $i += 2) {
+                $monthHeightLeft = $calcMonthHeight($months[$i]);
+                $monthHeightRight = isset($months[$i + 1]) ? $calcMonthHeight($months[$i + 1]) : 0;
+                $rowHeight = max($monthHeightLeft, $monthHeightRight);
+
+                if ($currentY + $rowHeight > $pdf->GetPageHeight() - $marginBottom) {
+                    $pdf->AddPage();
+                    $currentY = $pdf->GetY();
+                }
+
+                $pdf->SetY($currentY);
+                $drawMonth($pdf, $months[$i], $margin, $currentY, $monthWidth);
+
+                if (isset($months[$i + 1])) {
+                    $drawMonth($pdf, $months[$i + 1], $margin + $monthWidth + $columnGap, $currentY, $monthWidth);
+                }
+
+                $currentY += $rowHeight + $rowGap;
+            }
+
+            $pdf->SetY($currentY);
         }
     }
 
