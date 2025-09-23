@@ -53,6 +53,82 @@ function month_name_es(int $m): string {
     $n=[1=>'enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; return $n[$m]??(string)$m;
 }
 
+$isExportRequest = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_pdf']));
+
+if ($isExportRequest) {
+    $payload = $_POST['payload'] ?? '';
+    $decoded = json_decode(base64_decode((string)$payload, true) ?: '', true);
+
+    if (!is_array($decoded) || !isset($decoded['result']) || !is_array($decoded['result'])) {
+        header('Content-Type: text/plain; charset=utf-8', true, 400);
+        echo 'Datos inválidos para exportar.';
+        exit;
+    }
+
+    $result = $decoded['result'];
+    $worked_days = isset($decoded['worked_days']) && is_array($decoded['worked_days']) ? $decoded['worked_days'] : [];
+    $warn_msg = isset($decoded['warn']) && is_string($decoded['warn']) ? $decoded['warn'] : '';
+
+    require_once __DIR__.'/fpdf.php';
+
+    $pdf = new FPDF();
+    $pdf->SetTitle('Resumen de prácticas');
+    $pdf->AddPage();
+
+    $toPdf = static function (string $text): string {
+        $converted = @iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text);
+        return $converted !== false ? $converted : $text;
+    };
+
+    $pdf->SetFont('Arial', 'B', 16);
+    $pdf->Cell(0, 10, $toPdf('Resumen del cálculo de prácticas'), 0, 1, 'C');
+    $pdf->Ln(2);
+
+    $summary = [
+        'Inicio' => isset($result['start']) ? fmt_dmy((string)$result['start']) : '',
+        'Fin' => isset($result['end']) ? fmt_dmy((string)$result['end']) : '',
+        'Horas totales' => isset($result['total']) ? fmt_hours((float)$result['total']).' h' : '',
+        'Días computados' => isset($result['used_days']) ? (string)$result['used_days'] : '',
+        'Horas último día' => isset($result['last_day_hours']) ? fmt_hours((float)$result['last_day_hours']).' h' : '',
+    ];
+
+    $pdf->SetFont('Arial', '', 12);
+    foreach ($summary as $label => $value) {
+        if ($value === '') continue;
+        $pdf->Cell(60, 8, $toPdf($label.':'), 0, 0);
+        $pdf->Cell(0, 8, $toPdf($value), 0, 1);
+    }
+
+    if ($warn_msg !== '') {
+        $pdf->Ln(4);
+        $pdf->SetTextColor(146, 64, 14);
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->MultiCell(0, 6, $toPdf($warn_msg));
+        $pdf->SetTextColor(0, 0, 0);
+    }
+
+    if ($worked_days) {
+        ksort($worked_days);
+        $pdf->Ln(6);
+        $pdf->SetFont('Arial', 'B', 12);
+        $pdf->Cell(0, 8, $toPdf('Detalle de horas por día'), 0, 1);
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(120, 7, $toPdf('Fecha'), 1, 0, 'C');
+        $pdf->Cell(70, 7, $toPdf('Horas'), 1, 1, 'C');
+
+        $pdf->SetFont('Arial', '', 10);
+        foreach ($worked_days as $date => $hours) {
+            $pdf->Cell(120, 7, $toPdf(fmt_dmy((string)$date)), 1, 0);
+            $pdf->Cell(70, 7, $toPdf(fmt_hours((float)$hours).' h'), 1, 1, 'R');
+        }
+    }
+
+    $fileName = 'calculo-practicas-'.(new DateTimeImmutable())->format('Ymd_His').'.pdf';
+    $pdf->Output('D', $fileName);
+    exit;
+}
+
 $holidays = build_holidays();
 
 $result = null;
@@ -153,6 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     input:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px rgba(148,163,184,.25)}
     .actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
     button.primary{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
+    button.secondary{padding:8px 12px;border:none;border-radius:8px;background:#1e293b;color:#f8fafc;font-weight:600;cursor:pointer}
+    .export-form{margin-top:12px;display:flex;justify-content:flex-end}
 
     /* Tabla de horarios */
     .schedule{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden}
@@ -263,6 +341,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="box"><h3>Días computados</h3><p><?= htmlspecialchars((string)$result['used_days']) ?></p></div>
                         <div class="box"><h3>Horas último día</h3><p><?= fmt_hours((float)$result['last_day_hours']) ?> h</p></div>
                     </div>
+
+                    <?php
+                    $exportData = [
+                        'result' => $result,
+                        'worked_days' => $worked_days,
+                        'warn' => $warn,
+                    ];
+                    $exportJson = json_encode($exportData, JSON_UNESCAPED_UNICODE);
+                    $exportPayload = base64_encode($exportJson !== false ? $exportJson : '{}');
+                    ?>
+                    <form method="post" class="export-form">
+                        <input type="hidden" name="export_pdf" value="1">
+                        <input type="hidden" name="payload" value="<?= htmlspecialchars($exportPayload, ENT_QUOTES, 'UTF-8') ?>">
+                        <button type="submit" class="secondary">Exportar a PDF</button>
+                    </form>
 
                     <!-- Calendario + leyenda colores -->
                     <div class="cal-wrap">
