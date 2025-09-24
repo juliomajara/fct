@@ -28,23 +28,125 @@ function dur_minutes(?string $in, ?string $out): int {
     return max(0, $b - $a);
 }
 
-/** No lectivos fijos y rangos */
-function build_holidays(): array {
-    $single = ['2025-10-13', '2025-11-03', '2025-12-08'];
-    $ranges = [
-        ['2025-12-22', '2026-01-07'],
-        ['2026-03-27', '2026-04-06'],
+/**
+ * Carga la configuración de fechas (festivos y fecha tope) desde un archivo JSON.
+ *
+ * Formato esperado de fechas.txt:
+ * {
+ *   "deadline": "YYYY-MM-DD",
+ *   "holidays": {
+ *     "single": ["YYYY-MM-DD", ...],
+ *     "ranges": [["YYYY-MM-DD", "YYYY-MM-DD"], ...]
+ *   }
+ * }
+ */
+function load_date_settings(string $file): array {
+    $defaults = [
+        'deadline' => '2026-06-10',
+        'holidays' => [
+            'single' => ['2025-10-13', '2025-11-03', '2025-12-08'],
+            'ranges' => [
+                ['2025-12-22', '2026-01-07'],
+                ['2026-03-27', '2026-04-06'],
+            ],
+        ],
     ];
-    $set = [];
-    foreach ($single as $d) $set[$d] = true;
-    foreach ($ranges as [$start, $end]) {
-        $d = new DateTimeImmutable($start);
-        $endD = new DateTimeImmutable($end);
-        while ($d <= $endD) {
-            $set[$d->format('Y-m-d')] = true;
-            $d = $d->modify('+1 day');
+
+    if (!is_file($file)) {
+        return $defaults;
+    }
+
+    $content = @file_get_contents($file);
+    if ($content === false) {
+        return $defaults;
+    }
+
+    $decoded = json_decode($content, true);
+    if (!is_array($decoded)) {
+        return $defaults;
+    }
+
+    $settings = $defaults;
+
+    if (isset($decoded['deadline']) && is_string($decoded['deadline'])) {
+        $candidate = trim($decoded['deadline']);
+        if ($candidate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $candidate)) {
+            $settings['deadline'] = $candidate;
         }
     }
+
+    if (isset($decoded['holidays']) && is_array($decoded['holidays'])) {
+        $holidays = $decoded['holidays'];
+        if ($holidays === []) {
+            $settings['holidays'] = ['single' => [], 'ranges' => []];
+        } else {
+            if (isset($holidays['single']) && is_array($holidays['single'])) {
+                $settings['holidays']['single'] = $holidays['single'];
+            }
+            if (isset($holidays['ranges']) && is_array($holidays['ranges'])) {
+                $settings['holidays']['ranges'] = $holidays['ranges'];
+            }
+            if (array_values($holidays) === $holidays) {
+                // Permitir un array plano de días sueltos.
+                $settings['holidays']['single'] = $holidays;
+                $settings['holidays']['ranges'] = [];
+            }
+        }
+    }
+
+    return $settings;
+}
+
+/** Construye el listado de festivos en base a la configuración proporcionada. */
+function build_holidays(array $config): array {
+    $set = [];
+
+    $single = [];
+    if (isset($config['single']) && is_array($config['single'])) {
+        $single = $config['single'];
+    } elseif ($config !== [] && array_values($config) === $config) {
+        // Soporte para un array simple de fechas sueltas.
+        $single = $config;
+    }
+
+    foreach ($single as $d) {
+        $d = trim((string)$d);
+        if ($d === '') {
+            continue;
+        }
+        $set[$d] = true;
+    }
+
+    if (isset($config['ranges']) && is_array($config['ranges'])) {
+        foreach ($config['ranges'] as $range) {
+            if (!is_array($range) || count($range) < 2) {
+                continue;
+            }
+            $start = trim((string)$range[0]);
+            $end = trim((string)$range[1]);
+            if ($start === '' || $end === '') {
+                continue;
+            }
+
+            $startDate = DateTimeImmutable::createFromFormat('Y-m-d', $start) ?: null;
+            $endDate = DateTimeImmutable::createFromFormat('Y-m-d', $end) ?: null;
+            if (!$startDate || !$endDate) {
+                continue;
+            }
+
+            if ($startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+
+            $d = $startDate;
+            while ($d <= $endDate) {
+                $set[$d->format('Y-m-d')] = true;
+                $d = $d->modify('+1 day');
+            }
+        }
+    }
+
+    ksort($set);
     return $set;
 }
 function is_holiday(DateTimeInterface $d, array $holidays): bool { return isset($holidays[$d->format('Y-m-d')]); }
@@ -52,6 +154,12 @@ function weekday_index_iso(DateTimeInterface $d): int { return (int)$d->format('
 function month_name_es(int $m): string {
     $n=[1=>'enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; return $n[$m]??(string)$m;
 }
+
+$dateSettingsFile = __DIR__.'/fechas.txt';
+$dateSettings = load_date_settings($dateSettingsFile);
+$holidays = build_holidays($dateSettings['holidays'] ?? []);
+$deadlineRaw = isset($dateSettings['deadline']) && is_string($dateSettings['deadline']) ? trim($dateSettings['deadline']) : '';
+$deadlineDate = ($deadlineRaw !== '') ? (DateTimeImmutable::createFromFormat('Y-m-d', $deadlineRaw) ?: null) : null;
 
 $isExportRequest = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_pdf']));
 
@@ -69,8 +177,6 @@ if ($isExportRequest) {
     $worked_days = isset($decoded['worked_days']) && is_array($decoded['worked_days']) ? $decoded['worked_days'] : [];
     $schedule = isset($decoded['schedule']) && is_array($decoded['schedule']) ? $decoded['schedule'] : [];
     $warn_msg = isset($decoded['warn']) && is_string($decoded['warn']) ? $decoded['warn'] : '';
-
-    $holidays = build_holidays();
 
     require_once __DIR__.'/fpdf.php';
 
@@ -384,8 +490,6 @@ if ($isExportRequest) {
     exit;
 }
 
-$holidays = build_holidays();
-
 $result = null;
 $error  = null;
 $warn   = null;
@@ -460,9 +564,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($end_date)) {
             $error = "No ha sido posible calcular la fecha de fin (¿demasiados no lectivos o ningún día con tramos válidos?).";
         } else {
-            $deadline = new DateTimeImmutable('2026-06-10');
-            if ($end_date > $deadline) {
-                $warn = "⚠️ Las prácticas no se pueden completar a tiempo: la fecha de fin (".fmt_dmy($end_date->format('Y-m-d')).") es posterior al 10-06-2026.";
+            if ($deadlineDate instanceof DateTimeImmutable && $end_date > $deadlineDate) {
+                $deadlineLabel = fmt_dmy($deadlineDate->format('Y-m-d'));
+                $warn = sprintf(
+                    '⚠️ Las prácticas no se pueden completar a tiempo: la fecha de fin (%s) es posterior al %s.',
+                    fmt_dmy($end_date->format('Y-m-d')),
+                    $deadlineLabel
+                );
             }
             $result = [
                 'start'=>$start_date->format('Y-m-d'),
